@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %} {{ invoice.customer.name }} Invoice Details {% endblock %}
+
+{% block content %}
+<div class="container my-4">
+
+  <!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold text-primary mb-0">🧾 Invoice #{{ invoice.invoice_number }}</h2>
+  <div>
+    <a href="{% url 'invoice_edit' invoice.pk %}" class="btn btn-primary me-2">✏️ Update Invoice</a>
+<a href="{% url 'invoice_detail_pdf' invoice.pk %}" class="btn btn-outline-secondary">Download Detail PDF</a>
+  </div>
+</div>
+
+  <!-- Flash Messages
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %} -->
+
+  <!-- Customer Details -->
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <h5 class="mb-3">👤 Customer Info</h5>
+      <p><strong>Invoice Number:</strong> {{ invoice.invoice_number }}</p>
+      <p><strong>Name:</strong> {{ invoice.customer.name }}</p>
+      <p><strong>Phone:</strong> {{ invoice.customer.phone_number }}</p>
+      <p><strong>Phone 2:</strong> {{ invoice.customer.phone_number2 }}</p>
+      <p><strong>Address:</strong> {{ invoice.customer.address }}</p>
+      <p><strong>Created:</strong> {{ invoice.created_at|date:"d M Y, g:i A" }}</p>
+    </div>
+  </div>
+
+  <!-- Invoice Items -->
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <h5 class="mb-3">🧾 Items</h5>
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>Product Name</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in invoice.items.all %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ item.product_name }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>Rs {{ item.price }}</td>
+              <td>Rs {{ item.subtotal }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Totals -->
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <h5 class="mb-3">💰 Totals</h5>
+      <p><strong>Sub Total: </strong> Rs {{ subtotal }}</p>
+      <p><strong>Delivery Charges:</strong> Rs {{ invoice.delivery_charge }}</p>
+      <p><strong>Total Amount: </strong>{{total_amount}}</p>
+      <p><strong>Advance Payment:</strong> Rs {{ invoice.advance_payment }}</p>
+      <p><strong>Grand Total:</strong> Rs {{ invoice.total_amount }}</p>
+    </div>
+  </div>
+
+  <!-- Payment Status & COD Edit Form -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="mb-3">💳 Update Payment Information</h5>
+      <form method="post" action="{% url 'one_invoice' invoice.pk %}">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Payment Status</label>
+            <select name="payment_status" class="form-select" required>
+              <option value="paid" {% if invoice.payment_status == 'paid' %}selected{% endif %}>Paid</option>
+              <option value="unpaid" {% if invoice.payment_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">COD Number</label>
+            <input type="text" name="cod_number" value="{{ invoice.cod_number }}" class="form-control">
+          </div>
+
+          <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">💾 Update</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

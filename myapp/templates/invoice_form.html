@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2>Create Invoice</h2>
+<form method="post" onsubmit="return validateForm()">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Customer Name</label>
+      <input type="text" name="customer_name" class="form-control" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Phone Number</label>
+      <input type="text" name="customer_phone" class="form-control" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Phone Number 2</label>
+      <input type="text" name="customer_phone2" class="form-control">
+    </div>
+    <div class="col-md-12">
+      <label class="form-label">Address</label>
+      <input type="text" name="customer_address" class="form-control">
+    </div>
+  </div>
+
+
+  <!-- Line Items -->
+  <hr>
+  <h5>Line Items</h5>
+  <table class="table table-bordered" id="items-table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Quantity</th>
+        <th>Unit Price</th>
+        <th>Subtotal</th>
+        <th><button type="button" class="btn btn-success btn-sm" onclick="addItem()">+</button></th>
+      </tr>
+    </thead>
+
+    <tbody id="items-body"></tbody>
+  </table>
+
+  <!-- Advance + Delivery + Total -->
+  <div class="row g-3">
+    <div class="col-md-3">
+      <label class="form-label">Delivery Charges</label>
+      <input type="number" step="0.01" name="delivery_charges" class="form-control" id="delivery-input" value="0">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Total</label>
+      <input type="text" class="form-control" id="total-display" readonly>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Advance Payment</label>
+      <input type="number" step="0.01" name="advance_payment" class="form-control" id="advance-input" value="0">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Payment Method</label>
+      <select name="payment_method" class="form-select" id="payment-method-select" required>
+        <option value="">-- Select Payment Method --</option>
+        <option value="cash">Cash</option>
+        <option value="easypaisa">Easypaisa</option>
+        <option value="jazzcash">JazzCash</option>
+        <option value="raast">Raast</option>
+        <option value="bank_transfer">Bank Transfer</option>
+        <option value="UBL">UBL</option>
+        <option value="HBL">HBL</option>
+        <option value="MCB">MCB</option>
+        <option value="Meezan Bank">Meezan Bank</option>
+        <option value="Bank Alfalah">Bank Alfalah</option>
+        <option value="Bank Al Habib">Bank Al Habib</option>
+        <option value="Allied Bank">Allied Bank</option>
+        <option value="Askari Bank">Askari Bank</option>
+        <option value="Faysal Bank">Faysal Bank</option>
+        <option value="Standard Chartered">Standard Chartered</option>
+        <option value="Soneri Bank">Soneri Bank</option>
+        <option value="Bank of Punjab">Bank of Punjab</option>
+        <option value="Bank of Khyber">Bank of Khyber</option>
+        <option value="Sindh Bank">Sindh Bank</option>
+        <option value="JS Bank">JS Bank</option>
+        <option value="Habib Metropolitan Bank">Habib Metropolitan Bank</option>
+        <option value="Silk Bank">Silk Bank</option>
+        <option value="Dubai Islamic Bank">Dubai Islamic Bank</option>
+        <option value="Bank Islami">Bank Islami</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="col-md-3" id="other-method-field" style="display:none;">
+      <label class="form-label">Other Payment Method</label>
+      <input type="text" name="other_payment_method" class="form-control">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Payment Status</label>
+      <select name="payment_status" class="form-select" required>
+        <option value="paid">Paid</option>
+        <option value="unpaid">Unpaid</option>
+      </select>
+    </div>
+
+
+    <div class="col-md-3" id="other-payment-field" style="display: none;">
+      <label class="form-label">Other Payment Method</label>
+      <input type="text" name="other_payment_method" class="form-control">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Grand Total</label>
+      <input type="text" class="form-control" id="grand-total-display" readonly>
+    </div>
+  </div>
+
+  <hr>
+  <div class="mt-4">
+    <button type="submit" name="action" value="save" class="btn btn-success">💾 Save Invoice</button>
+    <button type="submit" name="action" value="print" class="btn btn-primary">🖨️ Print Invoice</button>
+  </div>
+</form>
+</div>
+
+<script>
+  function addItem(qty = '', price = '') {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+  <td><input name="product_name[]" type="text" class="form-control product" placeholder="Product name"></td>
+  <td><input name="quantity[]" type="number" class="form-control quantity" value="${qty}" required></td>
+  <td><input name="price[]" type="number" class="form-control price" value="${price}" required></td>
+  <td><input type="text" class="form-control subtotal" readonly></td>
+  <td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); calculateTotals();">−</button></td>
+`;
+
+    document.getElementById('items-body').appendChild(row);
+    bindChangeEvents(row);
+    calculateTotals();
+  }
+
+  function bindChangeEvents(row) {
+    row.querySelectorAll('.quantity, .price').forEach(input => {
+      input.addEventListener('input', calculateTotals);
+    });
+  }
+
+  function calculateTotals() {
+    let itemTotal = 0;
+    let error = false;
+
+    document.querySelectorAll('#items-body tr').forEach(row => {
+      const qty = parseFloat(row.querySelector('.quantity').value);
+      const price = parseFloat(row.querySelector('.price').value);
+
+      if (isNaN(qty) || qty <= 0 || isNaN(price) || price < 0) {
+        error = true;
+        row.querySelector('.subtotal').value = 'Invalid';
+      } else {
+        const subtotal = qty * price;
+        row.querySelector('.subtotal').value = subtotal.toFixed(2);
+        itemTotal += subtotal;
+      }
+    });
+
+    const delivery = parseFloat(document.getElementById('delivery-input').value) || 0;
+    const advance = parseFloat(document.getElementById('advance-input').value) || 0;
+
+    if (delivery < 0 || advance < 0) {
+      alert("Advance and delivery charges cannot be negative.");
+      return;
+    }
+
+    const total = itemTotal;
+    const grandTotal = total + delivery - advance;
+
+    document.getElementById('total-display').value = total.toFixed(2);
+    document.getElementById('grand-total-display').value = grandTotal.toFixed(2);
+  }
+
+  // Listen to input changes
+  document.getElementById('advance-input').addEventListener('input', calculateTotals);
+  document.getElementById('delivery-input').addEventListener('input', calculateTotals);
+
+
+  // Initialize one row
+  window.onload = () => addItem();
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const customerData = JSON.parse(localStorage.getItem('invoice_customer') || '{}');
+    if (customerData.name) document.querySelector('[name="customer_name"]').value = customerData.name;
+    if (customerData.phone) document.querySelector('[name="customer_phone"]').value = customerData.phone;
+    if (customerData.address) document.querySelector('[name="customer_address"]').value = customerData.address;
+    localStorage.removeItem('invoice_customer');
+  });
+
+  function validateForm() {
+    const rows = document.querySelectorAll('#items-body tr');
+    if (rows.length === 0) {
+      alert("Add at least one line item.");
+      return false;
+    }
+
+    for (const row of rows) {
+      const qty = parseFloat(row.querySelector('.quantity').value);
+      const price = parseFloat(row.querySelector('.price').value);
+      if (isNaN(qty) || qty <= 0 || isNaN(price) || price < 0) {
+        alert("Please fill valid quantity and price for all items.");
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  document.getElementById('payment-method-select').addEventListener('change', function () {
+    const otherField = document.getElementById('other-method-field');
+    if (this.value === 'Other') {
+      otherField.style.display = 'block';
+    } else {
+      otherField.style.display = 'none';
+    }
+  });
+
+
+
+</script>
+{% endblock %}

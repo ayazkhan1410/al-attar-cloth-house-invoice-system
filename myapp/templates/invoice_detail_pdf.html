@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+        }
+
+        .header,
+        .footer {
+            text-align: center;
+        }
+
+        .info {
+            margin: 20px 0;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .totals {
+            margin-top: 20px;
+        }
+
+        .totals td {
+            padding: 5px;
+        }
+
+        .section {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <div class="header" style="text-align: center; margin: 0; padding: 0;">
+        <h2 style="margin: 0; font-size: 18px;">AL ATTAR CLOTH HOUSE BAHAWALNAGAR</h2>
+        <p style="margin: 2px 0 0 0; font-size: 12px;">Phone: 0303-7152075 / 0324-7796795 / 0300-7922834</p>
+    </div>
+
+
+    <!-- Invoice + Customer Info -->
+    <div class="info">
+        <div style="width: 60%; float: left;">
+            <p><strong>Customer Name:</strong> {{ invoice.customer.name }}</p>
+            <p><strong>Phone:</strong> {{ invoice.customer.phone_number }}</p>
+            {% if invoice.customer.phone_number2 %}
+            <p><strong>Phone 2:</strong> {{ invoice.customer.phone_number2 }}</p>
+            {% endif %}
+            <p><strong>Address:</strong> {{ invoice.customer.address }}</p>
+        </div>
+        <div style="width: 35%; float: right;" class="right">
+            <p><strong>Invoice ID:</strong> {{ invoice.invoice_number }}</p>
+            <p><strong>Date:</strong> {{ invoice.created_at|date:"d M Y" }}</p>
+        </div>
+        <div style="clear: both;"></div>
+    </div>
+
+    <!-- Items -->
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.items.all %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ item.product_name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>Rs {{ item.price }}</td>
+                <td>Rs {{ item.subtotal }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totals -->
+    <table class="totals">
+        <tr>
+            <td><strong>Sub Total:</strong></td>
+            <td>Rs {{ subtotal }}</td>
+        </tr>
+        <tr>
+            <td><strong>Delivery Charges:</strong></td>
+            <td>Rs {{ invoice.delivery_charge }}</td>
+        </tr>
+        <tr>
+            <td><strong>Total Amount:</strong></td>
+            <td>Rs {{ total_amount }}</td>
+        </tr>
+        <tr>
+            <td><strong>Advance Payment:</strong></td>
+            <td>Rs {{ invoice.advance_payment }}</td>
+        </tr>
+        <tr>
+            <td><strong>Grand Total:</strong></td>
+            <td><strong>Rs {{ grand_total }}</strong></td>
+        </tr>
+    </table>
+
+</body>
+
+</html>
