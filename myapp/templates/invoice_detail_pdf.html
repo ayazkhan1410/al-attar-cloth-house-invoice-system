@@ -54,9 +54,8 @@
     <!-- Header -->
     <div class="header" style="text-align: center; margin: 0; padding: 0;">
         <h2 style="margin: 0; font-size: 18px;">AL ATTAR CLOTH HOUSE BAHAWALNAGAR</h2>
-        <p style="margin: 2px 0 0 0; font-size: 12px;">Phone: 0303-7152075 / 0324-7796795 / 0300-7922834</p>
+        <p style="margin: 2px 0 0 0; font-size: 12px;">Phone: 0311-7152075 / 0324-7796795 / 0300-7922834</p>
     </div>
-
 
     <!-- Invoice + Customer Info -->
     <div class="info">
@@ -114,7 +113,7 @@
             <td>Rs {{ total_amount }}</td>
         </tr>
         <tr>
-            <td><strong>Advance Payment:</strong></td>
+            <td><strong>Advance Payment ({{ invoice.payment_method }})</strong></td>
             <td>Rs {{ invoice.advance_payment }}</td>
         </tr>
         <tr>

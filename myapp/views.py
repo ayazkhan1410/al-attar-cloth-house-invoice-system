@@ -342,7 +342,6 @@ def bulk_invoice_action(request):
             pdf_response['Content-Disposition'] = f'attachment; filename="{urllib.parse.quote(filename)}"'
             return pdf_response
 
-
     return redirect('invoice_list')
 
 
@@ -386,6 +385,7 @@ def invoice_summary(request):
         "total": sum(inv.total_amount for inv in invoices),
         "paid": sum(inv.total_amount for inv in invoices if inv.payment_status == 'paid'),
         "pending": sum(inv.total_amount for inv in invoices if inv.payment_status != 'paid'),
+        "total_advance": sum(inv.advance_payment for inv in invoices),
     }
 
     return render(request, 'invoice_summary.html', {
