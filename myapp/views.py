@@ -83,22 +83,26 @@ def invoice_create(request, customer_id=None):
     if request.method == 'POST':
         # Upsert customer
         name = request.POST.get('customer_name')
-        phone = request.POST.get('customer_phone')
-        phone2 = request.POST.get('customer_phone2')
+        phone = (request.POST.get('customer_phone') or '').replace("-", "").strip()
+        phone2 = (request.POST.get('customer_phone2') or '').replace("-", "").strip()
         address = request.POST.get('customer_address')
 
         # Check for existing phone number assigned to another customer
-        existing_customer = Customer.objects.filter(
-            phone_number=phone
-        ).exclude(pk=customer_id).first()
-        
-        existing_customer2 = Customer.objects.filter(
-            phone_number2=phone2
-        ).exclude(pk=customer_id).first()
-
-        if existing_customer or existing_customer2:
-            messages.error(request, "A customer with this phone number already exists.")
+        existing = Customer.objects.exclude(pk=customer.pk if customer else None).filter(
+            Q(phone_number=phone) | Q(phone_number2=phone)
+        )
+        if existing.exists():
+            messages.error(request, f"This number ({phone}) is already assigned to {existing.first().name}.")
             return redirect('invoice_new')
+
+        # Check for conflicts on phone2
+        if phone2:
+            existing2 = Customer.objects.exclude(pk=customer.pk if customer else None).filter(
+                Q(phone_number=phone2) | Q(phone_number2=phone2)
+            )
+            if existing2.exists():
+                messages.error(request, f"This number ({phone2}) is already assigned to {existing2.first().name}.")
+                return redirect('invoice_new')
 
         customer, _ = Customer.objects.update_or_create(
             phone_number=phone,
@@ -190,7 +194,7 @@ def invoice_list(request):
         Q(invoice_number__icontains=q) 
     ).order_by('-created_at')
 
-    paginator = Paginator(invoices, 10)
+    paginator = Paginator(invoices, 24)
     page_number = request.GET.get('page')
     paged_invoices = paginator.get_page(page_number)
 
@@ -317,6 +321,9 @@ def bulk_invoice_action(request):
             id__in=ids).select_related('customer').prefetch_related('items'))
 
         for invoice in invoices:
+            invoice.total_quantity = sum(item.quantity for item in invoice.items.all())
+
+        for invoice in invoices:
             if action == 'print':
                 invoice.status = 'printed' if invoice.status != 'downloaded' else 'both'
             elif action == 'download':
@@ -383,7 +390,10 @@ def invoice_summary(request):
 
     summary = {
         "total": sum(inv.total_amount for inv in invoices),
-        "paid": sum(inv.total_amount for inv in invoices if inv.payment_status == 'paid'),
+        "paid": sum(
+            inv.advance_payment + inv.total_amount if inv.payment_status == 'paid' else 0
+            for inv in invoices
+        ),
         "pending": sum(inv.total_amount for inv in invoices if inv.payment_status != 'paid'),
         "total_advance": sum(inv.advance_payment for inv in invoices),
     }

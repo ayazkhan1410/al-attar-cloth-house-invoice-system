@@ -18,10 +18,10 @@
         <label class="form-label">Filter By</label>
         <select class="form-select" name="time_filter" onchange="this.form.submit()">
           <option value="">-- Select Filter --</option>
-          <option value="today" {% if time_filter=='today' %}selected{% endif %}>Today</option>
-          <option value="monthly" {% if time_filter=='monthly' %}selected{% endif %}>Monthly</option>
-          <option value="yearly" {% if time_filter=='yearly' %}selected{% endif %}>Yearly</option>
-          <option value="custom" {% if time_filter=='custom' %}selected{% endif %}>Custom Range</option>
+          <option value="today" {% if time_filter == 'today' %}selected{% endif %}>Today</option>
+          <option value="monthly" {% if time_filter == 'monthly' %}selected{% endif %}>Monthly</option>
+          <option value="yearly" {% if time_filter == 'yearly' %}selected{% endif %}>Yearly</option>
+          <option value="custom" {% if time_filter == 'custom' %}selected{% endif %}>Custom Range</option>
         </select>
       </div>
 
@@ -39,8 +39,8 @@
         <label class="form-label">Payment Status</label>
         <select name="status" class="form-select">
           <option value="">All</option>
-          <option value="paid" {% if status=='paid' %}selected{% endif %}>Paid</option>
-          <option value="unpaid" {% if status=='unpaid' %}selected{% endif %}>Unpaid</option>
+          <option value="paid" {% if status == 'paid' %}selected{% endif %}>Paid</option>
+          <option value="unpaid" {% if status == 'unpaid' %}selected{% endif %}>Unpaid</option>
         </select>
       </div>
 
@@ -76,7 +76,7 @@
           <td>{{ invoice.customer.name }}</td>
           <td>
             {% for item in invoice.items.all %}
-            {{ item.product_name }}{% if not forloop.last %}, {% endif %}
+              {{ item.product_name }}{% if not forloop.last %}, {% endif %}
             {% endfor %}
           </td>
           <td>{{ invoice.total_quantity }}</td>
@@ -87,27 +87,50 @@
           <td>{{ invoice.cod_number }}</td>
           <td>
             {% if invoice.payment_status == 'paid' %}
-            <span class="badge bg-success">Paid</span>
+              <span class="badge bg-success">Paid</span>
             {% elif invoice.payment_status == 'unpaid' %}
-            <span class="badge bg-warning text-dark">Unpaid</span>
+              <span class="badge bg-warning text-dark">Unpaid</span>
             {% else %}
-            <span class="badge bg-secondary">Unknown</span>
+              <span class="badge bg-secondary">Unknown</span>
             {% endif %}
           </td>
         </tr>
-        {% if forloop.counter0|add:1|divisibleby:10 %}
-        <tr class="page-break-row">
-          <td colspan="11"></td>
-        </tr>
-        {% endif %}
         {% empty %}
-        <tr>
-          <td colspan="11" class="text-center">No invoices found.</td>
-        </tr>
+        <tr><td colspan="11" class="text-center">No invoices found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  {% if invoices.paginator.num_pages > 1 %}
+  <nav class="mt-4">
+    <ul class="pagination justify-content-center">
+      {% if invoices.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ invoices.previous_page_number }}{% if time_filter %}&time_filter={{ time_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if status %}&status={{ status }}{% endif %}">« Prev</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">« Prev</span></li>
+      {% endif %}
+
+      {% for num in invoices.paginator.page_range %}
+        {% if invoices.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > invoices.number|add:'-3' and num < invoices.number|add:'3' %}
+          <li class="page-item"><a class="page-link" href="?page={{ num }}{% if time_filter %}&time_filter={{ time_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ num }}</a></li>
+        {% endif %}
+      {% endfor %}
+
+      {% if invoices.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ invoices.next_page_number }}{% if time_filter %}&time_filter={{ time_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Next »</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">Next »</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
 
   <!-- Summary -->
   <div class="row mb-4">
@@ -135,7 +158,7 @@
 
   <!-- Print Button -->
   <div class="text-end mb-5 no-print">
-    <button onclick="printReport()" class="btn btn-outline-dark">🖨️ Print Report</button>
+    <button onclick="printReport()" class="btn btn-outline-dark">🖸️ Print Report</button>
   </div>
 
   <!-- Print Footer -->
@@ -159,49 +182,68 @@
 
 {% block extra_css %}
 <style>
-  @media print {
-
-    nav,
-    footer,
-    .no-print,
-    .scroll-top-btn,
-    .btn,
-    .form-control,
-    .form-select {
-      display: none !important;
-    }
-
-    body {
-      margin: 0;
-      font-size: 10px !important;
-    }
-
-    .print-header,
-    .print-footer {
-      display: block !important;
-    }
-
-    .container {
-      width: 100%;
-      padding: 0;
-    }
-
-    .table,
-    .table th,
-    .table td {
-      border: 1px solid #000 !important;
-      padding: 4px !important;
-    }
-
-    .summary-box {
-      background: transparent !important;
-      border: none !important;
-      box-shadow: none !important;
-    }
-
-    .page-break-row {
-      page-break-after: always;
-    }
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
   }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+
+  .no-print, nav, footer, .scroll-top-btn, .btn, .form-control, .form-select, .pagination {
+    display: none !important;
+  }
+
+  .container, .table-responsive {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed;
+  }
+
+  .table th, .table td {
+    border: 1px solid #000 !important;
+    padding: 1px 2px !important;  /* reduced padding */
+    font-size: 9px !important;
+    word-wrap: break-word;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tbody tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  tbody tr:nth-child(25n+1) {
+    page-break-before: always !important;
+    break-before: page;
+  }
+
+  .print-header, .print-footer {
+    display: block !important;
+    page-break-inside: avoid !important;
+    margin: 0;
+    font-size: 10px;
+  }
+
+  .summary-box {
+    display: none !important;
+  }
+}
+
 </style>
+
 {% endblock %}

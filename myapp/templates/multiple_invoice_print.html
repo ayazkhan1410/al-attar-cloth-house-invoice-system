@@ -94,11 +94,7 @@
         <p><span class="label">Phone 2:</span> {{ invoice.customer.phone_number2 }}</p>
         {% endif %}
         <p><span class="label">Address:</span> {{ invoice.customer.address }}</p>
-        <p><span class="label">Product Name:</span>
-          {% for item in invoice.items.all %}
-          {{ item.product_name }}{% if not forloop.last %}, {% endif %}
-          {% endfor %}
-        </p>
+        <p><span class="label">Product Quantity:</span> {{ invoice.total_quantity }}</p>
         <p><span class="label">COD: </span> Rs {{ invoice.total_amount }}</p>
       </div>
       <div class="footer-note">
