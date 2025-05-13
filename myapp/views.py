@@ -1,3 +1,4 @@
+from datetime import datetime, time
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -14,6 +15,13 @@ from django.db.models import Q
 from django.utils.timezone import localtime
 from uuid import uuid4
 from django.utils.dateparse import parse_date
+
+
+def generate_unique_invoice_number():
+    while True:
+        code = f"INV-{uuid4().hex[:6].upper()}"
+        if not Invoice.objects.filter(invoice_number=code).exists():
+            return code
 
 
 def render_to_pdf(template_src, context_dict):
@@ -133,6 +141,7 @@ def invoice_create(request, customer_id=None):
         final_payment_method = other_payment_method if payment_method == 'Other' else payment_method
 
         # Create invoice
+        print("UNIQUE INVOICE NUMBER =========", generate_unique_invoice_number())
         invoice = Invoice.objects.create(
             customer=customer,
             advance_payment=advance,
@@ -212,7 +221,7 @@ def invoice_list(request):
     # CONFIRM PRINTED CUSTOMER 
     confirm_printed_customer = Invoice.objects.filter(
         created_at__date=today,
-        status='printed'
+        status='both'
     ).values('customer').distinct()
 
     todays_deal_customer = Invoice.objects.filter(
@@ -231,7 +240,6 @@ def invoice_list(request):
         'todays_deal_customer': len(todays_deal_customer),
         'month_deal_customer': len(month_deal_customer),
         "confirm_printed_customer": len(confirm_printed_customer),
-        
     }
 
     return render(request, 'invoice_list.html', {
@@ -355,8 +363,10 @@ def bulk_invoice_action(request):
 def invoice_summary(request):
     time_filter = request.GET.get('time_filter')
     status = request.GET.get('status')
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    start_time_str = request.GET.get('start_time')
+    end_time_str = request.GET.get('end_time')
 
     today = localtime(now()).date()
     if time_filter == 'today':
@@ -367,14 +377,29 @@ def invoice_summary(request):
     elif time_filter == 'yearly':
         start_date = today.replace(month=1, day=1)
         end_date = today
-    elif time_filter == 'custom' and start_date and end_date:
-        start_date = parse_date(start_date)
-        end_date = parse_date(end_date)
+    elif time_filter == 'custom' and start_date_str and end_date_str:
+        start_date = parse_date(start_date_str)
+        end_date = parse_date(end_date_str)
+    else:
+        start_date = parse_date(start_date_str) if start_date_str else None
+        end_date = parse_date(end_date_str) if end_date_str else None
 
     invoices = Invoice.objects.all().select_related('customer').prefetch_related('items')
 
+    # Time-based filtering
     if start_date and end_date:
-        invoices = invoices.filter(created_at__date__range=(start_date, end_date))
+        start_datetime = datetime.combine(start_date, time.min)
+        end_datetime = datetime.combine(end_date, time.max)
+
+        if start_time_str:
+            h, m = map(int, start_time_str.split(":"))
+            start_datetime = start_datetime.replace(hour=h, minute=m)
+
+        if end_time_str:
+            h, m = map(int, end_time_str.split(":"))
+            end_datetime = end_datetime.replace(hour=h, minute=m)
+
+        invoices = invoices.filter(created_at__range=(start_datetime, end_datetime))
 
     if status:
         invoices = invoices.filter(payment_status=status)
@@ -383,26 +408,25 @@ def invoice_summary(request):
         invoice.total_quantity = sum(item.quantity for item in invoice.items.all())
         invoice.total_price = sum(item.price * item.quantity for item in invoice.items.all())
 
-    # Apply pagination
     paginator = Paginator(invoices, 100)
     page_number = request.GET.get('page')
     paged_invoices = paginator.get_page(page_number)
 
     summary = {
         "total": sum(inv.total_amount for inv in invoices),
-        "paid": sum(
-            inv.advance_payment + inv.total_amount if inv.payment_status == 'paid' else 0
-            for inv in invoices
-        ),
+        "paid": sum(inv.advance_payment + inv.total_amount if inv.payment_status == 'paid' else 0 for inv in invoices),
         "pending": sum(inv.total_amount for inv in invoices if inv.payment_status != 'paid'),
         "total_advance": sum(inv.advance_payment for inv in invoices),
+        "total_suits": sum(inv.total_quantity for inv in invoices),
     }
 
     return render(request, 'invoice_summary.html', {
         'invoices': paged_invoices,
         'summary': summary,
         'time_filter': time_filter,
-        'start_date': start_date,
-        'end_date': end_date,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+        'start_time': start_time_str,
+        'end_time': end_time_str,
         'status': status,
     })

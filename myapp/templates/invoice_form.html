@@ -23,7 +23,6 @@
     </div>
   </div>
 
-
   <!-- Line Items -->
   <hr>
   <h5>Line Items</h5>
@@ -34,10 +33,9 @@
         <th>Quantity</th>
         <th>Unit Price</th>
         <th>Subtotal</th>
-        <th><button type="button" class="btn btn-success btn-sm" onclick="addItem()">+</button></th>
+        <th>Actions</th>
       </tr>
     </thead>
-
     <tbody id="items-body"></tbody>
   </table>
 
@@ -67,25 +65,7 @@
         <option value="jazzcash">JazzCash</option>
         <option value="raast">Raast</option>
         <option value="bank_transfer">Bank Transfer</option>
-        <option value="UBL">UBL</option>
-        <option value="HBL">HBL</option>
-        <option value="MCB">MCB</option>
-        <option value="Meezan Bank">Meezan Bank</option>
-        <option value="Bank Alfalah">Bank Alfalah</option>
-        <option value="Bank Al Habib">Bank Al Habib</option>
-        <option value="Allied Bank">Allied Bank</option>
-        <option value="Askari Bank">Askari Bank</option>
-        <option value="Faysal Bank">Faysal Bank</option>
-        <option value="Standard Chartered">Standard Chartered</option>
-        <option value="Soneri Bank">Soneri Bank</option>
-        <option value="Bank of Punjab">Bank of Punjab</option>
-        <option value="Bank of Khyber">Bank of Khyber</option>
-        <option value="Sindh Bank">Sindh Bank</option>
-        <option value="JS Bank">JS Bank</option>
-        <option value="Habib Metropolitan Bank">Habib Metropolitan Bank</option>
-        <option value="Silk Bank">Silk Bank</option>
-        <option value="Dubai Islamic Bank">Dubai Islamic Bank</option>
-        <option value="Bank Islami">Bank Islami</option>
+        <!-- bank options... -->
         <option value="Other">Other</option>
       </select>
     </div>
@@ -98,15 +78,9 @@
     <div class="col-md-3">
       <label class="form-label">Payment Status</label>
       <select name="payment_status" class="form-select" required>
+        <option value="unpaid" selected>Unpaid</option>
         <option value="paid">Paid</option>
-        <option value="unpaid">Unpaid</option>
       </select>
-    </div>
-
-
-    <div class="col-md-3" id="other-payment-field" style="display: none;">
-      <label class="form-label">Other Payment Method</label>
-      <input type="text" name="other_payment_method" class="form-control">
     </div>
 
     <div class="col-md-3">
@@ -121,18 +95,20 @@
     <button type="submit" name="action" value="print" class="btn btn-primary">🖨️ Print Invoice</button>
   </div>
 </form>
-</div>
 
 <script>
   function addItem(qty = '', price = '') {
     const row = document.createElement('tr');
     row.innerHTML = `
-  <td><input name="product_name[]" type="text" class="form-control product" placeholder="Product name"></td>
-  <td><input name="quantity[]" type="number" class="form-control quantity" value="${qty}" required></td>
-  <td><input name="price[]" type="number" class="form-control price" value="${price}" required></td>
-  <td><input type="text" class="form-control subtotal" readonly></td>
-  <td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); calculateTotals();">−</button></td>
-`;
+      <td><input name="product_name[]" type="text" class="form-control product" placeholder="Product name"></td>
+      <td><input name="quantity[]" type="number" class="form-control quantity" value="${qty}" required></td>
+      <td><input name="price[]" type="number" class="form-control price" value="${price}" required></td>
+      <td><input type="text" class="form-control subtotal" readonly></td>
+      <td>
+        <button type="button" class="btn btn-success btn-sm" onclick="addItem();">+</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); calculateTotals();">−</button>
+      </td>
+    `;
 
     document.getElementById('items-body').appendChild(row);
     bindChangeEvents(row);
@@ -178,14 +154,14 @@
     document.getElementById('grand-total-display').value = grandTotal.toFixed(2);
   }
 
-  // Listen to input changes
+  // Listeners
   document.getElementById('advance-input').addEventListener('input', calculateTotals);
   document.getElementById('delivery-input').addEventListener('input', calculateTotals);
-
 
   // Initialize one row
   window.onload = () => addItem();
 
+  // Preserve customer data
   window.addEventListener('DOMContentLoaded', () => {
     const customerData = JSON.parse(localStorage.getItem('invoice_customer') || '{}');
     if (customerData.name) document.querySelector('[name="customer_name"]').value = customerData.name;
@@ -213,14 +189,11 @@
     return true;
   }
 
+  // Show/hide other payment method
   document.getElementById('payment-method-select').addEventListener('change', function () {
     const otherField = document.getElementById('other-method-field');
-    if (this.value === 'Other') {
-      otherField.style.display = 'block';
-    } else {
-      otherField.style.display = 'none';
-    }
+    otherField.style.display = this.value === 'Other' ? 'block' : 'none';
   });
-
 </script>
+
 {% endblock %}
