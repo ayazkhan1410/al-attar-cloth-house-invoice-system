@@ -60,11 +60,30 @@
       <label class="form-label">Payment Method</label>
       <select name="payment_method" class="form-select" id="payment-method-select" required>
         <option value="">-- Select Payment Method --</option>
-        <option value="cash">Cash</option>
-        <option value="easypaisa">Easypaisa</option>
-        <option value="jazzcash">JazzCash</option>
-        <option value="raast">Raast</option>
-        <option value="bank_transfer">Bank Transfer</option>
+          <option value="cash">Cash</option>
+          <option value="easypaisa">Easypaisa</option>
+          <option value="jazzcash">JazzCash</option>
+          <option value="raast">Raast</option>
+          <option value="bank_transfer">Bank Transfer</option>
+          <option value="UBL">UBL</option>
+          <option value="HBL">HBL</option>
+          <option value="MCB">MCB</option>
+          <option value="Meezan Bank">Meezan Bank</option>
+          <option value="Bank Alfalah">Bank Alfalah</option>
+          <option value="Bank Al Habib">Bank Al Habib</option>
+          <option value="Allied Bank">Allied Bank</option>
+          <option value="Askari Bank">Askari Bank</option>
+          <option value="Faysal Bank">Faysal Bank</option>
+          <option value="Standard Chartered">Standard Chartered</option>
+          <option value="Soneri Bank">Soneri Bank</option>
+          <option value="Bank of Punjab">Bank of Punjab</option>
+          <option value="Bank of Khyber">Bank of Khyber</option>
+          <option value="Sindh Bank">Sindh Bank</option>
+          <option value="JS Bank">JS Bank</option>
+          <option value="Habib Metropolitan Bank">Habib Metropolitan Bank</option>
+          <option value="Silk Bank">Silk Bank</option>
+          <option value="Dubai Islamic Bank">Dubai Islamic Bank</option>
+          <option value="Bank Islami">Bank Islami</option>
         <!-- bank options... -->
         <option value="Other">Other</option>
       </select>
@@ -147,8 +166,8 @@
       return;
     }
 
-    const total = itemTotal;
-    const grandTotal = total + delivery - advance;
+    const total = itemTotal + delivery;
+    const grandTotal = total - advance;
 
     document.getElementById('total-display').value = total.toFixed(2);
     document.getElementById('grand-total-display').value = grandTotal.toFixed(2);
