@@ -46,8 +46,8 @@ class Customer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # def __str__(self):
-    #     return self.name if self.name else "Unnamed Customer"
+    def __str__(self):
+        return self.name if self.name else "Unnamed Customer"
 
 
 class Invoice(models.Model):
@@ -80,8 +80,13 @@ class Invoice(models.Model):
         total = sum(item.subtotal for item in self.items.all())
         return total + self.delivery_charge - self.advance_payment
 
-    # def __str__(self):
-    #     return f"Invoice for {self.customer.name} - Total: {self.total_amount}"
+    @property
+    def updated_total_amount(self):
+        total = sum(item.subtotal for item in self.items.all())
+        return total + self.delivery_charge
+
+    def __str__(self):
+        return f"{self.customer.name} - Total: {self.total_amount}"
 
 
 class InvoiceItem(models.Model):
@@ -96,5 +101,5 @@ class InvoiceItem(models.Model):
             return 0
         return self.quantity * self.price
 
-    # def __str__(self):
-    #     return f"Item {self.id} - Quantity: {self.quantity}, Price: {self.price}"
+    def __str__(self):
+        return f"Item {self.id} - Quantity: {self.quantity}, Price: {self.price}"
