@@ -15,5 +15,5 @@ urlpatterns = [
     path("one-invoice-details/<int:pk>/", views.one_invoice_detail, name="one_invoice"),
     path('invoices/bulk-action/', views.bulk_invoice_action, name='bulk_invoice_action'),
     path('invoices/summary/', views.invoice_summary, name='invoice_summary'),
-
+    path('customers/<int:pk>/edit/', views.customer_update, name='customer_edit'),
 ]

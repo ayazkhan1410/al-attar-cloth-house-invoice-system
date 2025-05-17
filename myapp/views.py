@@ -86,7 +86,7 @@ def invoice_detail_pdf(request, pk):
 def invoice_create(request, customer_id=None):
     customer = None
     if customer_id:
-        customer = get_object_or_404(Customer, pk=customer_id)
+        customer = get_object_or_404(Customer, pk=customer_id) if customer_id else None
 
     if request.method == 'POST':
         # Upsert customer
@@ -95,21 +95,24 @@ def invoice_create(request, customer_id=None):
         phone2 = (request.POST.get('customer_phone2') or '').replace("-", "").strip()
         address = request.POST.get('customer_address')
 
-        # Check for existing phone number assigned to another customer
-        existing = Customer.objects.exclude(pk=customer.pk if customer else None).filter(
-            Q(phone_number=phone) | Q(phone_number2=phone)
-        )
-        if existing.exists():
-            messages.error(request, f"This number ({phone}) is already assigned to {existing.first().name}.")
-            return redirect('invoice_new')
+        # If customer exists and phone numbers changed, validate
+        if customer:
+            if phone != customer.phone_number and Customer.objects.filter(phone_number=phone).exclude(pk=customer.pk).exists():
+                messages.error(request, "This phone number is already assigned to another customer.")
+                return redirect('invoice_new')
 
-        # Check for conflicts on phone2
-        if phone2:
-            existing2 = Customer.objects.exclude(pk=customer.pk if customer else None).filter(
-                Q(phone_number=phone2) | Q(phone_number2=phone2)
-            )
-            if existing2.exists():
-                messages.error(request, f"This number ({phone2}) is already assigned to {existing2.first().name}.")
+            if phone2 and phone2 != customer.phone_number2 and Customer.objects.filter(phone_number2=phone2).exclude(pk=customer.pk).exists():
+                messages.error(request, "This secondary phone number is already assigned to another customer.")
+                return redirect('invoice_new')
+
+        # If creating new customer, validate without exclusion
+        if not customer:
+            if Customer.objects.filter(phone_number=phone).exists():
+                messages.error(request, "This phone number is already assigned to another customer.")
+                return redirect('invoice_new')
+
+            if phone2 and Customer.objects.filter(phone_number2=phone2).exists():
+                messages.error(request, "This secondary phone number is already assigned to another customer.")
                 return redirect('invoice_new')
 
         customer, _ = Customer.objects.update_or_create(
@@ -141,12 +144,11 @@ def invoice_create(request, customer_id=None):
         final_payment_method = other_payment_method if payment_method == 'Other' else payment_method
 
         # Create invoice
-        print("UNIQUE INVOICE NUMBER =========", generate_unique_invoice_number())
         invoice = Invoice.objects.create(
             customer=customer,
             advance_payment=advance,
             delivery_charge=delivery_charges,
-            invoice_number=f"INV-{uuid4().hex[:6].upper()}",
+            invoice_number=generate_unique_invoice_number(),
             payment_method=final_payment_method,
             payment_status=payment_status
         )
@@ -338,7 +340,6 @@ def bulk_invoice_action(request):
                 invoice.status = 'downloaded' if invoice.status != 'printed' else 'both'
             invoice.save()
 
-        # ✅ Define this before conditional
         invoice_groups = list(chunked(invoices, 6))
         context = {'invoice_groups': invoice_groups}
 
@@ -408,16 +409,22 @@ def invoice_summary(request):
         invoice.total_quantity = sum(item.quantity for item in invoice.items.all())
         invoice.total_price = sum(item.price * item.quantity for item in invoice.items.all())
 
+        if invoice.payment_status == 'paid':
+            invoice.cod_collected = (invoice.total_price + invoice.delivery_charge) - invoice.advance_payment
+        else:
+            invoice.cod_collected = 0
+
     paginator = Paginator(invoices, 100)
     page_number = request.GET.get('page')
     paged_invoices = paginator.get_page(page_number)
 
     summary = {
-        "total": sum(inv.total_amount for inv in invoices),
+        "total": sum(inv.updated_total_amount for inv in invoices),
         "paid": sum(inv.advance_payment + inv.total_amount if inv.payment_status == 'paid' else 0 for inv in invoices),
         "pending": sum(inv.total_amount for inv in invoices if inv.payment_status != 'paid'),
         "total_advance": sum(inv.advance_payment for inv in invoices),
         "total_suits": sum(inv.total_quantity for inv in invoices),
+        "cod_received": sum(inv.cod_collected for inv in invoices),
     }
 
     return render(request, 'invoice_summary.html', {
@@ -430,3 +437,34 @@ def invoice_summary(request):
         'end_time': end_time_str,
         'status': status,
     })
+
+
+def customer_update(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        phone = request.POST.get('phone').replace("-", "").strip()
+        phone2 = (request.POST.get('phone2') or '').replace("-", "").strip()
+        address = request.POST.get('address')
+
+        # Validate phone uniqueness
+        if Customer.objects.exclude(pk=customer.pk).filter(phone_number=phone).exists():
+            messages.error(request, "Primary phone number is already used by another customer.")
+            return redirect('customer_edit', pk=pk)
+
+        if phone2 and Customer.objects.exclude(pk=customer.pk).filter(phone_number2=phone2).exists():
+            messages.error(request, "Secondary phone number is already used by another customer.")
+            return redirect('customer_edit', pk=pk)
+
+        # Save updates
+        customer.name = name
+        customer.phone_number = phone
+        customer.phone_number2 = phone2
+        customer.address = address
+        customer.save()
+
+        messages.success(request, "Customer updated successfully.")
+        return redirect('customer_list')
+
+    return render(request, 'customer_edit.html', {'customer': customer})
