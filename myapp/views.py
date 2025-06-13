@@ -202,6 +202,7 @@ def invoice_list(request):
     invoices = Invoice.objects.filter(
         Q(customer__name__icontains=q) |
         Q(customer__phone_number__icontains=q) |
+         Q(customer__phone_number2__icontains=q) |
         Q(invoice_number__icontains=q) 
     ).order_by('-created_at')
 
@@ -340,7 +341,7 @@ def bulk_invoice_action(request):
                 invoice.status = 'downloaded' if invoice.status != 'printed' else 'both'
             invoice.save()
 
-        invoice_groups = list(chunked(invoices, 6))
+        invoice_groups = list(chunked(invoices, 8))
         context = {'invoice_groups': invoice_groups}
 
         if action == 'print':
